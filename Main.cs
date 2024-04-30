@@ -152,6 +152,7 @@ namespace WorldGenTest
             spriteBatch.End();
 
             spriteBatch.Begin();
+            spriteBatch.DrawRectangle(new Rectangle(Main.screenDimX - miniMapSize - 10, 0, 254, 254), Color.Black, 1f);
             miniMap.Draw(spriteBatch, new Vector2(Main.screenDimX - miniMapSize - 6, 4));
             spriteBatch.End();
 

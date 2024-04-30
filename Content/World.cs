@@ -10,7 +10,7 @@ namespace WorldGenTest.Content
     public class World
     {
         public int tileSize = 32;
-        public int worldSize = 200;
+        public int worldSize = 150;
         public int[,] tileID;
         private Rectangle[,] tileRectangle;
 
