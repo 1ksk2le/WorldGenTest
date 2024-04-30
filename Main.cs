@@ -141,6 +141,9 @@ namespace WorldGenTest
 
         protected override void Draw(GameTime gameTime)
         {
+            Vector2 mouseWorldPosition = Input_Manager.Instance.mousePosition / camera.zoom + camera.position;
+            Point mouseTile = new Point((int)(mouseWorldPosition.X / world.tileSize), (int)(mouseWorldPosition.Y / world.tileSize));
+
             GraphicsDevice.Clear(Color.Black);
 
             miniMap.DrawRenderTarget(spriteBatch, camera, world, 2);
@@ -149,6 +152,11 @@ namespace WorldGenTest
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, camera.TransformMatrix);
             world.Draw(spriteBatch, camera, tileTextures);
+
+
+            string tileInfo = $"[{world.GetTileID(mouseTile.X, mouseTile.Y)}] {TileLoader.LoadTileName(world.GetTileID(mouseTile.X, mouseTile.Y))}";
+            spriteBatch.DrawStringWithOutline(font, tileInfo, mouseWorldPosition + new Vector2(12, 0), Color.Black, Color.White, 1f, 1f);
+
             spriteBatch.End();
 
             spriteBatch.Begin();
@@ -159,6 +167,9 @@ namespace WorldGenTest
             spriteBatch.Begin();
             DrawFPS(gameTime);
             spriteBatch.DrawStringWithOutline(font, "Camera POS: " + camera.position, new Vector2(10, 20), Color.Black, Color.White, 1f, 1f);
+            spriteBatch.DrawStringWithOutline(font, "Mouse POS: " + mouseWorldPosition, new Vector2(10, 30), Color.Black, Color.White, 1f, 1f);
+            spriteBatch.DrawStringWithOutline(font, "Mouse Tile POS: " + mouseTile, new Vector2(10, 40), Color.Black, Color.White, 1f, 1f);
+
             spriteBatch.End();
 
             base.Draw(gameTime);
