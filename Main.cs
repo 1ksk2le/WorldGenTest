@@ -22,14 +22,21 @@ namespace WorldGenTest
         private int frameCounter;
         private TimeSpan elapsedTime = TimeSpan.Zero;
 
-        public static int screenDimX, screenDimY;
+        public static Vector2 screenDim;
 
         private World world;
+        public static int chosenTile;
+        public static bool devMode;
 
-        private int miniMapSize = 246;
+        #region MINIMAP VARIABLES
+        public static int miniMapZoom = 2;
+        private Vector2 miniMapPosition = Vector2.Zero;
         private Minimap miniMap;
+        #endregion
 
         Dictionary<int, Texture2D> tileTextures;
+
+        private GameConsole console;
 
         float textDuration;
 
@@ -42,15 +49,16 @@ namespace WorldGenTest
 
         protected override void Initialize()
         {
-            screenDimX = 1000;
-            screenDimY = 1000;
-            graphics.PreferredBackBufferHeight = screenDimY;
-            graphics.PreferredBackBufferWidth = screenDimX;
+            screenDim = new Vector2(1000, 1000);
+            graphics.PreferredBackBufferHeight = (int)screenDim.Y;
+            graphics.PreferredBackBufferWidth = (int)screenDim.X;
             graphics.ApplyChanges();
 
             world = new World();
-            int worldArea = world.worldSize * world.tileSize;
+            int worldArea = world.size * world.tileSize;
             camera = new Camera(Vector2.Zero, worldArea, worldArea);
+
+            tileTextures = new Dictionary<int, Texture2D>();
 
             base.Initialize();
         }
@@ -59,116 +67,115 @@ namespace WorldGenTest
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            string filePath = "Content/TileID.csv";
-            miniMap = new Minimap(miniMapSize, GraphicsDevice, TileLoader.LoadTileColors(filePath));
-
-            world.LoadFromFile("world1.csv");
-
             pixel = new Texture2D(GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
             font = Content.Load<SpriteFont>("Fonts/Font_Test");
 
-
-            tileTextures = TileLoader.LoadTileTextures(filePath, Content);
-
-            foreach (var kvp in tileTextures)
+            for (int i = 0; i < 4; i++)
             {
-                int tileID = kvp.Key;
-                string texturePath = $"Textures/Tiles/Tile_{tileID}";
+                string texturePath = $"Textures/Tiles/Tile_{i}";
                 Texture2D texture = Content.Load<Texture2D>(texturePath);
-                tileTextures[tileID] = texture;
+                tileTextures[i] = texture;
             }
 
+            miniMap = new Minimap(GraphicsDevice, Tile.MinimapColors);
+            miniMapZoom = 2;
+            miniMapPosition = new Vector2(Main.screenDim.X - miniMap.miniMapSize - 6, 4);
+            chosenTile = 1;
 
+            world.LoadFromFile("world1.csv");
+
+            devMode = true;
+            console = new GameConsole(world, font);
         }
 
         protected override void Update(GameTime gameTime)
         {
-            var input = Input_Manager.Instance;
+            var input = InputManager.Instance;
             input.PreUpdate();
-            input.PostUpdate(gameTime);
+            input.PostUpdate(gameTime, camera);
 
-            camera.Update(gameTime);
+            camera.Update(gameTime, console);
+            miniMap.Update(console);
 
             Build();
+            console.Update(input);
 
-            if (input.IsKeySinglePress(Keys.C))
+            #region CONTROLS
+            if (!console.isVisible)
             {
-                for (int i = 0; i < world.worldSize; i++)
+                if (input.IsKeySinglePress(Keys.PageUp))
                 {
-                    for (int j = 0; j < world.worldSize; j++)
-                    {
-                        world.SetTileID(i, j, 1);
-                    }
+                    miniMapZoom++;
+                }
+                else if (input.IsKeySinglePress(Keys.PageDown) && miniMapZoom > 1)
+                {
+                    miniMapZoom--;
+                }
+                if (input.IsKeySinglePress(Keys.F5))
+                {
+                    textDuration = 2;
+                    world.SaveToFile("world1.csv");
+                }
+                if (input.IsKeySinglePress(Keys.F9))
+                {
+                    world.LoadFromFile("world1.csv");
                 }
             }
+            #endregion
 
             if (textDuration > 0)
             {
                 textDuration -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            if (input.IsKeySinglePress(Keys.F5))
-            {
-                textDuration = 2;
-                world.SaveToFile("world1.csv");
-            }
-            if (input.IsKeySinglePress(Keys.F9))
-            {
-                world.LoadFromFile("world1.csv");
-            }
-
             base.Update(gameTime);
-        }
-
-        void Build()
-        {
-            var input = Input_Manager.Instance;
-            if (input.IsButtonPressed(true))
-            {
-
-                Vector2 mouseWorldPosition = Input_Manager.Instance.mousePosition / camera.zoom + camera.position;
-
-                Point mouseTile = new Point((int)(mouseWorldPosition.X / world.tileSize), (int)(mouseWorldPosition.Y / world.tileSize));
-
-                if (mouseTile.X >= 0 && mouseTile.X < world.worldSize && mouseTile.Y >= 0 && mouseTile.Y < world.worldSize)
-                {
-                    world.SetTileID(mouseTile.X, mouseTile.Y, 2);
-                }
-            }
         }
 
         protected override void Draw(GameTime gameTime)
         {
-            Vector2 mouseWorldPosition = Input_Manager.Instance.mousePosition / camera.zoom + camera.position;
-            Point mouseTile = new Point((int)(mouseWorldPosition.X / world.tileSize), (int)(mouseWorldPosition.Y / world.tileSize));
+            var input = InputManager.Instance;
+            Point mouseTile = new Point((int)(input.mouseWorldPosition.X / world.tileSize), (int)(input.mouseWorldPosition.Y / world.tileSize));
 
             GraphicsDevice.Clear(Color.Black);
 
-            miniMap.DrawRenderTarget(spriteBatch, camera, world, 2);
+            miniMap.MinimapRenderTarget(spriteBatch, camera, world, miniMapZoom);
 
             GraphicsDevice.SetRenderTarget(null);
 
             spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, camera.TransformMatrix);
             world.Draw(spriteBatch, camera, tileTextures);
 
-
-            string tileInfo = $"[{world.GetTileID(mouseTile.X, mouseTile.Y)}] {TileLoader.LoadTileName(world.GetTileID(mouseTile.X, mouseTile.Y))}";
-            spriteBatch.DrawStringWithOutline(font, tileInfo, mouseWorldPosition + new Vector2(12, 0), Color.Black, Color.White, 1f, 1f);
+            string tileInfo = $"[{world.GetTileID(mouseTile.X, mouseTile.Y)}] {Tile.GetTileName(world.GetTileID(mouseTile.X, mouseTile.Y))}";
+            spriteBatch.DrawStringWithOutline(font, tileInfo, input.mouseWorldPosition + new Vector2(12, 0), Color.Black, Color.White, 1f, 1f);
 
             spriteBatch.End();
 
             spriteBatch.Begin();
-            spriteBatch.DrawRectangle(new Rectangle(Main.screenDimX - miniMapSize - 10, 0, 254, 254), Color.Black, 1f);
-            miniMap.Draw(spriteBatch, new Vector2(Main.screenDimX - miniMapSize - 6, 4));
+            miniMap.Draw(spriteBatch, miniMapPosition);
             spriteBatch.End();
 
             spriteBatch.Begin();
-            DrawFPS(gameTime);
-            spriteBatch.DrawStringWithOutline(font, "Camera POS: " + camera.position, new Vector2(10, 20), Color.Black, Color.White, 1f, 1f);
-            spriteBatch.DrawStringWithOutline(font, "Mouse POS: " + mouseWorldPosition, new Vector2(10, 30), Color.Black, Color.White, 1f, 1f);
-            spriteBatch.DrawStringWithOutline(font, "Mouse Tile POS: " + mouseTile, new Vector2(10, 40), Color.Black, Color.White, 1f, 1f);
+            console.Draw(spriteBatch, graphics);
+            spriteBatch.End();
+
+            spriteBatch.Begin();
+            if (!console.isVisible)
+            {
+                DrawFPS(gameTime);
+                spriteBatch.DrawStringWithOutline(font, "Camera POS: " + camera.position, new Vector2(10, 20), Color.Black, Color.White, 1f, 1f);
+                spriteBatch.DrawStringWithOutline(font, "Camera Center: " + camera.center, new Vector2(10, 30), Color.Black, Color.White, 1f, 1f);
+                spriteBatch.DrawStringWithOutline(font, "Mouse POS: " + input.mousePosition, new Vector2(10, 40), Color.Black, Color.White, 1f, 1f);
+                spriteBatch.DrawStringWithOutline(font, "Mouse World POS: " + input.mouseWorldPosition, new Vector2(10, 50), Color.Black, Color.White, 1f, 1f);
+                spriteBatch.DrawStringWithOutline(font, "Mouse Tile POS: " + mouseTile, new Vector2(10, 60), Color.Black, Color.White, 1f, 1f);
+            }
+
+            int visibleTileX = (int)((Main.screenDim.X / world.tileSize) / camera.zoom);
+            int visibleTileY = (int)((Main.screenDim.Y / world.tileSize) / camera.zoom);
+
+            spriteBatch.DrawStringWithOutline(font, "vis X: " + visibleTileX, new Vector2(10, 200), Color.Black, Color.White, 1f, 1f);
+            spriteBatch.DrawStringWithOutline(font, "vis Y: " + visibleTileY, new Vector2(10, 210), Color.Black, Color.White, 1f, 1f);
 
             spriteBatch.End();
 
@@ -189,6 +196,21 @@ namespace WorldGenTest
 
             string fps = string.Format("FPS: {0}", frameRate);
             spriteBatch.DrawStringWithOutline(font, fps, new Vector2(10, 10), Color.Black, Color.White, 1f, 1f);
+        }
+
+        private void Build()
+        {
+            var input = InputManager.Instance;
+            if (input.IsButtonPressed(true) &&
+                (!input.IsMouseOnUI(new Rectangle((int)miniMapPosition.X, (int)miniMapPosition.Y, miniMap.miniMapSize, miniMap.miniMapSize)) && miniMap.isVisible == 1))
+            {
+                Point mouseTile = new Point((int)(input.mouseWorldPosition.X / world.tileSize), (int)(input.mouseWorldPosition.Y / world.tileSize));
+
+                if (mouseTile.X >= 0 && mouseTile.X < world.size && mouseTile.Y >= 0 && mouseTile.Y < world.size)
+                {
+                    world.SetTileID(mouseTile.X, mouseTile.Y, chosenTile);
+                }
+            }
         }
     }
 }

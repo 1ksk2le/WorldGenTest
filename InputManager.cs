@@ -5,43 +5,46 @@ using System.Text;
 
 namespace WorldGenTest
 {
-    public class Input_Manager
+    public class InputManager
     {
         public KeyboardState currentKeyboardState;
         public KeyboardState previousKeyboardState;
         public MouseState currentMouseState;
         public MouseState previousMouseState;
         public Vector2 mousePosition;
+        public Vector2 mouseWorldPosition;
 
-        private static Input_Manager instance;
+        private static InputManager instance;
 
-        public static Input_Manager Instance
+        public static InputManager Instance
         {
             get
             {
                 if (instance == null)
                 {
-                    instance = new Input_Manager();
+                    instance = new InputManager();
                 }
                 return instance;
             }
         }
 
-        private Input_Manager()
+        private InputManager()
         { }
 
         public void PreUpdate()
         {
             previousKeyboardState = currentKeyboardState;
             previousMouseState = currentMouseState;
+
         }
 
-        public void PostUpdate(GameTime gameTime)
+        public void PostUpdate(GameTime gameTime, Camera camera)
         {
             currentKeyboardState = Keyboard.GetState();
             currentMouseState = Mouse.GetState();
 
             mousePosition = new Vector2(currentMouseState.X, currentMouseState.Y) * (float)gameTime.ElapsedGameTime.TotalSeconds * 60f;
+            mouseWorldPosition = (mousePosition / camera.zoom + camera.position) * (float)gameTime.ElapsedGameTime.TotalSeconds * 60f;
         }
 
         public bool IsKeyDown(Keys key)
@@ -78,6 +81,18 @@ namespace WorldGenTest
             return leftClick
                 ? currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released
                 : currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released;
+        }
+
+        public bool IsMouseOnUI(Rectangle UIRectangles)
+        {
+            if (UIRectangles.Contains(mousePosition))
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public string GetPressedKeys()

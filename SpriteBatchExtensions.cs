@@ -23,15 +23,15 @@ namespace WorldGenTest
             }
         }
 
-        public static void DrawRectangleBorder(this SpriteBatch spriteBatch, Rectangle rectangle, Color borderColor, float borderWidth, float layerDepth)
+        public static void DrawRectangleBorder(this SpriteBatch spriteBatch, Rectangle rectangle, Color borderColor, float layerDepth, float borderWidth)
         {
-            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Y), new Vector2(rectangle.Right, rectangle.Y), borderColor, layerDepth);
-            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Bottom), new Vector2(rectangle.Right, rectangle.Bottom), borderColor, layerDepth);
-            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Y), new Vector2(rectangle.X, rectangle.Bottom), borderColor, layerDepth);
-            spriteBatch.DrawLine(new Vector2(rectangle.Right, rectangle.Y), new Vector2(rectangle.Right, rectangle.Bottom), borderColor, layerDepth);
+            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Y), new Vector2(rectangle.Right, rectangle.Y), borderColor, layerDepth, borderWidth);
+            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Bottom), new Vector2(rectangle.Right, rectangle.Bottom), borderColor, layerDepth, borderWidth);
+            spriteBatch.DrawLine(new Vector2(rectangle.X, rectangle.Y), new Vector2(rectangle.X, rectangle.Bottom), borderColor, layerDepth, borderWidth);
+            spriteBatch.DrawLine(new Vector2(rectangle.Right, rectangle.Y), new Vector2(rectangle.Right, rectangle.Bottom), borderColor, layerDepth, borderWidth);
         }
 
-        public static void DrawCircle(this SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int segments, float layerDepth)
+        public static void DrawCircle(this SpriteBatch spriteBatch, Vector2 center, float radius, Color color, int segments, float layerDepth, float borderWidth)
         {
             float angleIncrement = MathHelper.TwoPi / segments;
 
@@ -43,11 +43,11 @@ namespace WorldGenTest
                 Vector2 point1 = center + new Vector2((float)Math.Cos(angle1) * radius, (float)Math.Sin(angle1) * radius);
                 Vector2 point2 = center + new Vector2((float)Math.Cos(angle2) * radius, (float)Math.Sin(angle2) * radius);
 
-                spriteBatch.DrawLine(point1, point2, color, layerDepth);
+                spriteBatch.DrawLine(point1, point2, color, layerDepth, borderWidth);
             }
         }
 
-        public static void DrawLine(this SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, float layerDepth, float thickness = 2f)
+        public static void DrawLine(this SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color, float layerDepth, float thickness)
         {
             Vector2 edge = end - start;
             float angle = (float)Math.Atan2(edge.Y, edge.X);
@@ -71,7 +71,7 @@ namespace WorldGenTest
                 spriteBatch.Draw(Main.pixel, pixelPosition, null, pixelColor, angle, Vector2.Zero, new Vector2(1, thickness), SpriteEffects.None, layerDepth);
             }
         }
-        public static void DrawRectangleOutlineBetweenPoints(this SpriteBatch spriteBatch, Vector2 startPoint, Vector2 endPoint, Color color, float layerDepth)
+        public static void DrawRectangleOutlineBetweenPoints(this SpriteBatch spriteBatch, Vector2 startPoint, Vector2 endPoint, Color color, float layerDepth, float borderWidth)
         {
             Vector2[] corners = new Vector2[4];
             corners[0] = startPoint;
@@ -82,7 +82,7 @@ namespace WorldGenTest
             for (int i = 0; i < 4; i++)
             {
                 int nextIndex = (i + 1) % 4;
-                spriteBatch.DrawLine(corners[i], corners[nextIndex], color, layerDepth);
+                spriteBatch.DrawLine(corners[i], corners[nextIndex], color, layerDepth, borderWidth);
             }
         }
     }

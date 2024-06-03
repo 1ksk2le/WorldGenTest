@@ -1,43 +1,65 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
 
 namespace WorldGenTest.Content
 {
     public class Tile
     {
-        public int TileID { get; set; }
-        public Color MiniMapColor { get; set; }
-        public Texture2D Texture { get; set; }
+        public int ID { get; set; }
+        public Rectangle Rectangle { get; set; }
+        public bool IsWalkable { get; set; }
+        public bool IsDestructible { get; set; }
+        public string Name { get; set; }
+        public Color Color { get; set; }
 
-        public Tile(int tileID, Color miniMapColor, Texture2D texture)
+        public static List<Tile> Type { get; private set; }
+        public static Dictionary<int, Color> MinimapColors { get; private set; }
+
+        static Tile()
         {
-            TileID = tileID;
-            MiniMapColor = miniMapColor;
-            Texture = texture;
+            MinimapColors = new Dictionary<int, Color>
+            {
+                { 0, Color.Black },
+                { 1, new Color(0, 125, 0) },
+                { 2, new Color(60, 60, 60) },
+                { 3, new Color(125, 125, 255) }
+            };
+
+            Type = new List<Tile>
+            {
+                new Tile(0, Rectangle.Empty, "Unknown", false, false),
+                new Tile(1, Rectangle.Empty, "Grass", true, false),
+                new Tile(2, Rectangle.Empty, "Stone", true, false),
+                new Tile(3, Rectangle.Empty, "Water", false, false)
+            };
+
+
         }
 
-        // Method to draw the tile
-        public virtual void Draw(SpriteBatch spriteBatch, Rectangle rectangle)
+        public Tile(int id, Rectangle rectangle, string name, bool isWalkable, bool isDestructible)
         {
-            spriteBatch.Draw(Texture, rectangle, Color.White);
+            ID = id;
+            Rectangle = rectangle;
+            Name = name;
+            IsWalkable = isWalkable;
+            IsDestructible = isDestructible;
         }
-    }
 
-    public class Grass : Tile
-    {
-        public Grass(int tileID, Color miniMapColor, Texture2D texture) : base(tileID, miniMapColor, texture)
+        public static string GetTileName(int id)
         {
-            tileID = 0;
-            miniMapColor = Color.Green;
+            Tile tile = Type.Find(t => t.ID == id);
+            return tile != null ? tile.Name : "Unknown";
         }
-    }
 
-    public class Stone : Tile
-    {
-        public Stone(int tileID, Color miniMapColor, Texture2D texture) : base(tileID, miniMapColor, texture)
+        public Tile Clone(Rectangle rectangle)
         {
-            tileID = 1;
-            miniMapColor = Color.Gray;
+            return new Tile(ID, rectangle, Name, IsWalkable, IsDestructible);
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Texture2D texture)
+        {
+            spriteBatch.Draw(texture, Rectangle, Color.White);
         }
     }
 }

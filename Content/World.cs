@@ -6,55 +6,51 @@ using System.IO;
 
 namespace WorldGenTest.Content
 {
-
     public class World
     {
-        public int tileSize = 32;
-        public int worldSize = 150;
-        public int[,] tileID;
-        private Rectangle[,] tileRectangle;
+        public int tileSize { get; } = 32;
+        public int size { get; } = 350;
+        public Tile[,] tiles { get; private set; }
 
         public World()
         {
-            tileRectangle = new Rectangle[worldSize, worldSize];
-            tileID = new int[worldSize, worldSize];
+            tiles = new Tile[size, size];
             GenerateWorldGrid();
         }
 
         private void GenerateWorldGrid()
         {
-            for (int x = 0; x < worldSize; x++)
+            for (int x = 0; x < size; x++)
             {
-                for (int y = 0; y < worldSize; y++)
+                for (int y = 0; y < size; y++)
                 {
-                    tileRectangle[x, y] = new Rectangle(x * tileSize, y * tileSize, tileSize, tileSize);
-                    tileID[x, y] = 3;
+                    var rectangle = new Rectangle(x * tileSize, y * tileSize, tileSize, tileSize);
+                    tiles[x, y] = Tile.Type[1].Clone(rectangle);
                 }
             }
         }
 
         public void Draw(SpriteBatch spriteBatch, Camera camera, Dictionary<int, Texture2D> tileTextures)
         {
-            int startX = (int)MathHelper.Clamp(camera.position.X / tileSize, 0, worldSize - 1);
-            int startY = (int)MathHelper.Clamp(camera.position.Y / tileSize, 0, worldSize - 1);
+            int startX = (int)MathHelper.Clamp(camera.position.X / tileSize, 0, size - 1);
+            int startY = (int)MathHelper.Clamp(camera.position.Y / tileSize, 0, size - 1);
 
-            int endX = (int)MathHelper.Clamp((camera.position.X + spriteBatch.GraphicsDevice.Viewport.Width / camera.zoom) / tileSize + 1, 0, worldSize);
-            int endY = (int)MathHelper.Clamp((camera.position.Y + spriteBatch.GraphicsDevice.Viewport.Height / camera.zoom) / tileSize + 1, 0, worldSize);
+            int endX = (int)MathHelper.Clamp((camera.position.X + spriteBatch.GraphicsDevice.Viewport.Width / camera.zoom) / tileSize + 1, 0, size);
+            int endY = (int)MathHelper.Clamp((camera.position.Y + spriteBatch.GraphicsDevice.Viewport.Height / camera.zoom) / tileSize + 1, 0, size);
 
-            Vector2 mouseWorldPosition = Input_Manager.Instance.mousePosition / camera.zoom + camera.position;
+            Vector2 mouseWorldPosition = InputManager.Instance.mousePosition / camera.zoom + camera.position;
             Point mouseTile = new Point((int)(mouseWorldPosition.X / tileSize), (int)(mouseWorldPosition.Y / tileSize));
 
             for (int x = startX; x < endX; x++)
             {
                 for (int y = startY; y < endY; y++)
                 {
-                    Texture2D texture = tileTextures[tileID[x, y]];
-                    Vector2 position = new Vector2(x * tileSize, y * tileSize);
-                    spriteBatch.Draw(texture, position, Color.White);
+                    Texture2D texture = tileTextures[tiles[x, y].ID];
+                    tiles[x, y].Draw(spriteBatch, texture);
 
                     if (x == mouseTile.X && y == mouseTile.Y)
                     {
-                        spriteBatch.DrawRectangle(tileRectangle[x, y], Color.White * 0.2f, 0.99f);//Draw a white transparent box on the tile our mouse is hovering
+                        spriteBatch.DrawRectangle(tiles[x, y].Rectangle, Color.White * 0.2f, 0.99f); // Draw a white transparent box on the tile our mouse is hovering
                     }
                 }
             }
@@ -62,24 +58,41 @@ namespace WorldGenTest.Content
 
         public int GetTileID(int x, int y)
         {
-            if (x >= 0 && x < worldSize && y >= 0 && y < worldSize)
+            if (x >= 0 && x < size && y >= 0 && y < size)
             {
-                return this.tileID[x, y];
+                return tiles[x, y].ID;
             }
             return 0;
         }
 
         public void SetTileID(int x, int y, int tileID)
         {
-            if (x >= 0 && x < worldSize && y >= 0 && y < worldSize)
+            if (x >= 0 && x < size && y >= 0 && y < size)
             {
-                this.tileID[x, y] = tileID;
+                tiles[x, y].ID = tileID;
+            }
+        }
+
+        public Tile GetTile(int x, int y)
+        {
+            if (x >= 0 && x < size && y >= 0 && y < size)
+            {
+                return tiles[x, y];
+            }
+            return null;
+        }
+
+        public void SetTile(int x, int y, Tile tile)
+        {
+            if (x >= 0 && x < size && y >= 0 && y < size)
+            {
+                tiles[x, y] = tile.Clone(new Rectangle(x * tileSize, y * tileSize, tileSize, tileSize));
             }
         }
 
         public void SaveToFile(string fileName)
         {
-            string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string folderPath = Path.Combine(appDataPath, "WhirlingRealms");
             if (!Directory.Exists(folderPath))
             {
@@ -90,26 +103,26 @@ namespace WorldGenTest.Content
 
             using (StreamWriter writer = new StreamWriter(filePath))
             {
-                for (int y = 0; y < worldSize; y++)
+                for (int y = 0; y < size; y++)
                 {
-                    int currentTile = tileID[0, y];
+                    int currentTileID = tiles[0, y].ID;
                     int count = 1;
 
-                    for (int x = 1; x < worldSize; x++)
+                    for (int x = 1; x < size; x++)
                     {
-                        if (tileID[x, y] == currentTile)
+                        if (tiles[x, y].ID == currentTileID)
                         {
                             count++;
                         }
                         else
                         {
-                            writer.Write($"{currentTile}:{count} ");
-                            currentTile = tileID[x, y];
+                            writer.Write($"{currentTileID}:{count} ");
+                            currentTileID = tiles[x, y].ID;
                             count = 1;
                         }
                     }
 
-                    writer.Write($"{currentTile}:{count} ");
+                    writer.Write($"{currentTileID}:{count} ");
                     writer.WriteLine();
                 }
             }
@@ -117,7 +130,7 @@ namespace WorldGenTest.Content
 
         public void LoadFromFile(string fileName)
         {
-            string appDataPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.ApplicationData);
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string folderPath = Path.Combine(appDataPath, "WhirlingRealms");
             string filePath = Path.Combine(folderPath, fileName);
 
@@ -154,9 +167,10 @@ namespace WorldGenTest.Content
 
                         for (int i = 0; i < count; i++)
                         {
-                            if (x < worldSize && y < worldSize)
+                            if (x < size && y < size)
                             {
-                                this.tileID[x, y] = tileID;
+                                var rectangle = new Rectangle(x * tileSize, y * tileSize, tileSize, tileSize);
+                                tiles[x, y] = Tile.Type[tileID].Clone(rectangle);
                                 x++;
                             }
                         }

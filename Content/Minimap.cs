@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
 
@@ -7,73 +8,97 @@ namespace WorldGenTest.Content
 {
     public class Minimap
     {
-        public RenderTarget2D renderTarget;
+        public RenderTarget2D miniMapRenderTarget;
         private GraphicsDevice graphicsDevice;
         private Dictionary<int, Color> tileColors;
-        private int miniMapSize;
-
-        public Minimap(int miniMapSize, GraphicsDevice graphicsDevice, Dictionary<int, Color> tileColors)
+        public int miniMapSize;
+        public int isVisible;
+        public Minimap(GraphicsDevice graphicsDevice, Dictionary<int, Color> tileColors)
         {
-            this.miniMapSize = miniMapSize;
+            this.miniMapSize = 246;
             this.graphicsDevice = graphicsDevice;
-            this.renderTarget = new RenderTarget2D(graphicsDevice, miniMapSize, miniMapSize, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
+            miniMapRenderTarget = new RenderTarget2D(graphicsDevice, this.miniMapSize, this.miniMapSize);
             this.tileColors = tileColors;
+            isVisible = 1;
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position)
+        public void Draw(SpriteBatch spriteBatch, Vector2 miniMapPos)
         {
-            spriteBatch.Draw(renderTarget, position, Color.White);
+            int borderWidth = 8;
+            if (isVisible == 1)
+            {
+                spriteBatch.DrawRectangle(new Rectangle((int)miniMapPos.X - borderWidth / 2, (int)miniMapPos.Y - borderWidth / 2, miniMapSize + borderWidth, miniMapSize + borderWidth), Color.Black, 1f);
+                spriteBatch.Draw(miniMapRenderTarget, miniMapPos, Color.White);
+                spriteBatch.DrawStringWithOutline(Main.font, "Zoom: " + Main.miniMapZoom, miniMapPos + new Vector2(0, miniMapSize), Color.Black, Color.White, 1f, 1);
+            }
         }
 
-        public void DrawRenderTarget(SpriteBatch spriteBatch, Camera camera, World world, int miniMapPixelSize)
+        public void Update(GameConsole console)
         {
-            graphicsDevice.SetRenderTarget(renderTarget);
+            var input = InputManager.Instance;
+            if (input.IsKeySinglePress(Keys.M) && !console.isVisible)
+            {
+                if (isVisible < 2)
+                {
+                    isVisible++;
+                }
+                else
+                {
+                    isVisible = 0;
+                }
+
+            }
+        }
+        public void MinimapRenderTarget(SpriteBatch spriteBatch, Camera camera, World world, int miniMapZoom)
+        {
+            graphicsDevice.SetRenderTarget(miniMapRenderTarget);
+
+            graphicsDevice.Clear(Color.Transparent);
 
             spriteBatch.Begin();
 
-            // Calculate the position of the camera in tile coordinates
-            int cameraTopLeftX = (int)(camera.position.X / world.tileSize);
-            int cameraTopLeftY = (int)(camera.position.Y / world.tileSize);
+            Vector2 cameraCenter = camera.center;
+            int centerTileX = (int)cameraCenter.X / world.tileSize;
+            int centerTileY = (int)cameraCenter.Y / world.tileSize;
 
-            // Calculate the start position for rendering based on the camera's position
-            int startX = cameraTopLeftX;
-            int startY = cameraTopLeftY;
+            int halfSize = (miniMapSize / 2) / Main.miniMapZoom;
+            int startX = Math.Max(centerTileX - halfSize, 0);
+            int startY = Math.Max(centerTileY - halfSize, 0);
 
-            // Calculate the number of tiles that fit in the minimap based on its pixel size
-            int numTilesX = miniMapSize / miniMapPixelSize;
-            int numTilesY = miniMapSize / miniMapPixelSize;
+            startX = Math.Min(startX, world.size - (miniMapSize / Main.miniMapZoom));
+            startY = Math.Min(startY, world.size - (miniMapSize / Main.miniMapZoom));
 
-            // Calculate the maximum start position for rendering based on the camera's position and the size of the minimap
-            int maxStartX = Math.Max(0, Math.Min(world.worldSize - numTilesX, cameraTopLeftX));
-            int maxStartY = Math.Max(0, Math.Min(world.worldSize - numTilesY, cameraTopLeftY));
-
-            // Adjust the start position if it exceeds the maximum allowed
-            startX = Math.Min(startX, maxStartX);
-            startY = Math.Min(startY, maxStartY);
-
-            for (int x = 0; x < numTilesX; x++)
+            for (int y = 0; y < miniMapSize / Main.miniMapZoom; y++)
             {
-                for (int y = 0; y < numTilesY; y++)
+                for (int x = 0; x < miniMapSize / Main.miniMapZoom; x++)
                 {
-                    // Calculate the world coordinates for the current tile in the minimap
-                    int worldX = startX + x;
-                    int worldY = startY + y;
+                    int tileX = startX + x;
+                    int tileY = startY + y;
 
-                    // Check if the current world coordinates are within the bounds of the world
-                    if (worldX >= 0 && worldX < world.worldSize && worldY >= 0 && worldY < world.worldSize)
+                    if (tileX >= 0 && tileY >= 0 && tileX < world.size && tileY < world.size)
                     {
-                        // Get the tile ID and color for the current world coordinates
-                        int tileID = world.tileID[worldX, worldY];
-                        Color tileColor = tileColors.ContainsKey(tileID) ? tileColors[tileID] : Color.Transparent;
-
-                        // Calculate the destination rectangle for rendering the tile in the minimap
-                        Rectangle destinationRect = new Rectangle(x * miniMapPixelSize, y * miniMapPixelSize, miniMapPixelSize, miniMapPixelSize);
-
-                        // Draw the tile using a 1x1 pixel texture
-                        spriteBatch.Draw(Main.pixel, destinationRect, tileColor);
+                        int tileID = world.GetTileID(tileX, tileY);
+                        if (tileColors.TryGetValue(tileID, out Color tileColor))
+                        {
+                            spriteBatch.Draw(Main.pixel, new Rectangle(x * Main.miniMapZoom, y * Main.miniMapZoom, Main.miniMapZoom, Main.miniMapZoom), tileColor);
+                        }
                     }
                 }
             }
+
+            float cameraViewWidth = Main.screenDim.X / camera.zoom;
+            float cameraViewHeight = Main.screenDim.Y / camera.zoom;
+            float cameraViewWidthInTiles = cameraViewWidth / world.tileSize;
+            float cameraViewHeightInTiles = cameraViewHeight / world.tileSize;
+            float cameraViewWidthInPixels = cameraViewWidthInTiles * Main.miniMapZoom;
+            float cameraViewHeightInPixels = cameraViewHeightInTiles * Main.miniMapZoom;
+
+            float cameraViewX = (centerTileX - startX - cameraViewWidthInTiles / 2) * Main.miniMapZoom;
+            float cameraViewY = (centerTileY - startY - cameraViewHeightInTiles / 2) * Main.miniMapZoom;
+
+            Rectangle cameraViewRectangle = new Rectangle((int)cameraViewX, (int)cameraViewY, (int)cameraViewWidthInPixels, (int)cameraViewHeightInPixels);
+
+            spriteBatch.DrawRectangleBorder(cameraViewRectangle, Color.Red, 0f, 1f);
 
             spriteBatch.End();
 
@@ -81,4 +106,5 @@ namespace WorldGenTest.Content
         }
 
     }
+
 }
