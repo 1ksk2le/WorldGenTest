@@ -7,9 +7,9 @@ namespace WorldGenTest.Content
     public class Tile
     {
         public int ID { get; set; }
-        public Rectangle Rectangle { get; set; }
+        public Rectangle rectangle { get; set; }
         public bool IsWalkable { get; set; }
-        public bool IsDestructible { get; set; }
+        public bool IsDestructable { get; set; }
         public string Name { get; set; }
         public Color Color { get; set; }
 
@@ -40,10 +40,10 @@ namespace WorldGenTest.Content
         public Tile(int id, Rectangle rectangle, string name, bool isWalkable, bool isDestructible)
         {
             ID = id;
-            Rectangle = rectangle;
-            Name = name;
-            IsWalkable = isWalkable;
-            IsDestructible = isDestructible;
+            this.rectangle = rectangle;
+            this.Name = name;
+            this.IsWalkable = isWalkable;
+            IsDestructable = isDestructible;
         }
 
         public static string GetTileName(int id)
@@ -54,12 +54,16 @@ namespace WorldGenTest.Content
 
         public Tile Clone(Rectangle rectangle)
         {
-            return new Tile(ID, rectangle, Name, IsWalkable, IsDestructible);
+            return new Tile(ID, rectangle, Name, IsWalkable, IsDestructable);
         }
 
         public void Draw(SpriteBatch spriteBatch, Texture2D texture)
         {
-            spriteBatch.Draw(texture, Rectangle, Color.White);
+            if (ID != 0)
+            {
+                spriteBatch.Draw(texture, rectangle, Color.White);
+            }
+
         }
     }
 }

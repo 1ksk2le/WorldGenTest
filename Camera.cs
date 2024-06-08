@@ -90,8 +90,8 @@ namespace WorldGenTest
             float visibleY = position.Y - (visibleHeight / 2);
 
             // Ensure the visible area does not extend beyond the boundaries of the world
-            visibleX = MathHelper.Clamp(visibleX, 0, world.size - visibleWidth);
-            visibleY = MathHelper.Clamp(visibleY, 0, world.size - visibleHeight);
+            visibleX = MathHelper.Clamp(visibleX, 0, world.sizeX - visibleWidth);
+            visibleY = MathHelper.Clamp(visibleY, 0, world.sizeY - visibleHeight);
 
             // Create and return the rectangle representing the visible area
             return new Rectangle((int)visibleX, (int)visibleY, (int)visibleWidth, (int)visibleHeight);

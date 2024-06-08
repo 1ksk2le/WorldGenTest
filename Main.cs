@@ -29,7 +29,7 @@ namespace WorldGenTest
         public static bool devMode;
 
         #region MINIMAP VARIABLES
-        public static int miniMapZoom = 2;
+        public static int mapZoom = 2;
         private Vector2 miniMapPosition = Vector2.Zero;
         private Minimap miniMap;
         #endregion
@@ -55,8 +55,7 @@ namespace WorldGenTest
             graphics.ApplyChanges();
 
             world = new World();
-            int worldArea = world.size * world.tileSize;
-            camera = new Camera(Vector2.Zero, worldArea, worldArea);
+            camera = new Camera(Vector2.Zero, world.tileSize * world.sizeX, world.tileSize * world.sizeY);
 
             tileTextures = new Dictionary<int, Texture2D>();
 
@@ -80,7 +79,7 @@ namespace WorldGenTest
             }
 
             miniMap = new Minimap(GraphicsDevice, Tile.MinimapColors);
-            miniMapZoom = 2;
+            mapZoom = 2;
             miniMapPosition = new Vector2(Main.screenDim.X - miniMap.miniMapSize - 6, 4);
             chosenTile = 1;
 
@@ -97,9 +96,24 @@ namespace WorldGenTest
             input.PostUpdate(gameTime, camera);
 
             camera.Update(gameTime, console);
-            miniMap.Update(console);
+            miniMap.Update(console, camera, world, miniMapPosition);
 
-            Build();
+            if (devMode)
+            {
+                Build();
+                if (input.IsKeySinglePress(Keys.B))
+                {
+                    for (int i = 0; i < world.sizeX; i++)
+                    {
+                        for (int j = 0; j < world.sizeY; j++)
+                        {
+                            world.SetTileID(i, j, 0);
+                        }
+                    }
+                    world.GenerateDungeon(35, 8, 24, new Vector2(50, 10), 5, 2);
+                }
+            }
+
             console.Update(input);
 
             #region CONTROLS
@@ -107,11 +121,11 @@ namespace WorldGenTest
             {
                 if (input.IsKeySinglePress(Keys.PageUp))
                 {
-                    miniMapZoom++;
+                    mapZoom++;
                 }
-                else if (input.IsKeySinglePress(Keys.PageDown) && miniMapZoom > 1)
+                else if (input.IsKeySinglePress(Keys.PageDown) && mapZoom > 1)
                 {
-                    miniMapZoom--;
+                    mapZoom--;
                 }
                 if (input.IsKeySinglePress(Keys.F5))
                 {
@@ -140,7 +154,7 @@ namespace WorldGenTest
 
             GraphicsDevice.Clear(Color.Black);
 
-            miniMap.MinimapRenderTarget(spriteBatch, camera, world, miniMapZoom);
+            miniMap.MinimapRenderTarget(spriteBatch, camera, world);
 
             GraphicsDevice.SetRenderTarget(null);
 
@@ -153,7 +167,7 @@ namespace WorldGenTest
             spriteBatch.End();
 
             spriteBatch.Begin();
-            miniMap.Draw(spriteBatch, miniMapPosition);
+            miniMap.Draw(spriteBatch, camera, world, miniMapPosition);
             spriteBatch.End();
 
             spriteBatch.Begin();
@@ -202,11 +216,11 @@ namespace WorldGenTest
         {
             var input = InputManager.Instance;
             if (input.IsButtonPressed(true) &&
-                (!input.IsMouseOnUI(new Rectangle((int)miniMapPosition.X, (int)miniMapPosition.Y, miniMap.miniMapSize, miniMap.miniMapSize)) && miniMap.isVisible == 1))
+                (!input.IsMouseOnUI(new Rectangle((int)miniMapPosition.X, (int)miniMapPosition.Y, miniMap.miniMapSize, miniMap.miniMapSize)) && miniMap.isVisible != 2))
             {
                 Point mouseTile = new Point((int)(input.mouseWorldPosition.X / world.tileSize), (int)(input.mouseWorldPosition.Y / world.tileSize));
 
-                if (mouseTile.X >= 0 && mouseTile.X < world.size && mouseTile.Y >= 0 && mouseTile.Y < world.size)
+                if (mouseTile.X >= 0 && mouseTile.X < world.sizeX && mouseTile.Y >= 0 && mouseTile.Y < world.sizeY)
                 {
                     world.SetTileID(mouseTile.X, mouseTile.Y, chosenTile);
                 }

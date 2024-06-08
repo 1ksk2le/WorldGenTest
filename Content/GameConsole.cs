@@ -141,9 +141,9 @@ namespace WorldGenTest
             }
             else if (command == "CLEARWORLD")
             {
-                for (int i = 0; i < world.size; i++)
+                for (int i = 0; i < world.sizeX; i++)
                 {
-                    for (int j = 0; j < world.size; j++)
+                    for (int j = 0; j < world.sizeY; j++)
                     {
                         world.SetTileID(i, j, 1);
                     }
